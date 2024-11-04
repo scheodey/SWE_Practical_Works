@@ -1,39 +1,41 @@
 from collections import deque
 
-# Step 1: Implement the Graph Class
 class Graph:
-    def _init_(self):
-        self.graph = {}
+    def __init__(self):
+        self.adjacency_list = {}
     
     def add_vertex(self, vertex):
-        if vertex not in self.graph:
-            self.graph[vertex] = []
+        """Add a vertex to the graph."""
+        if vertex not in self.adjacency_list:
+            self.adjacency_list[vertex] = set()
     
     def add_edge(self, vertex1, vertex2):
+        """Add an undirected edge between two vertices."""
         self.add_vertex(vertex1)
         self.add_vertex(vertex2)
-        self.graph[vertex1].append(vertex2)
-        self.graph[vertex2].append(vertex1)  # For undirected graph
-    
-    def print_graph(self):
-        for vertex in self.graph:
-            print(f"{vertex}: {' '.join(map(str, self.graph[vertex]))}")
+        self.adjacency_list[vertex1].add(vertex2)
+        self.adjacency_list[vertex2].add(vertex1)
 
-    # Step 2: Implement Depth-First Search (DFS)
+    def display(self):
+        """Display the graph as an adjacency list."""
+        for vertex, neighbors in self.adjacency_list.items():
+            print(f"{vertex}: {' '.join(map(str, neighbors))}")
+
     def dfs(self, start_vertex):
+        """Perform Depth-First Search (DFS)."""
         visited = set()
-        self._dfs_recursive(start_vertex, visited)
+        self._dfs_helper(start_vertex, visited)
     
-    def _dfs_recursive(self, vertex, visited):
+    def _dfs_helper(self, vertex, visited):
         visited.add(vertex)
         print(vertex, end=' ')
         
-        for neighbor in self.graph[vertex]:
+        for neighbor in self.adjacency_list[vertex]:
             if neighbor not in visited:
-                self._dfs_recursive(neighbor, visited)
+                self._dfs_helper(neighbor, visited)
 
-    # Step 3: Implement Breadth-First Search (BFS)
     def bfs(self, start_vertex):
+        """Perform Breadth-First Search (BFS)."""
         visited = set()
         queue = deque([start_vertex])
         visited.add(start_vertex)
@@ -42,102 +44,97 @@ class Graph:
             vertex = queue.popleft()
             print(vertex, end=' ')
 
-            for neighbor in self.graph[vertex]:
+            for neighbor in self.adjacency_list[vertex]:
                 if neighbor not in visited:
                     visited.add(neighbor)
                     queue.append(neighbor)
 
-    # Step 4: Implement a Method to Find All Paths
-    def find_all_paths(self, start_vertex, end_vertex, path=[]):
-        path = path + [start_vertex]
-        if start_vertex == end_vertex:
-            return [path]
-        if start_vertex not in self.graph:
-            return []
+    def find_all_paths(self, start_vertex, end_vertex):
+        """Find all paths between two vertices."""
         paths = []
-        for neighbor in self.graph[start_vertex]:
-            if neighbor not in path:
-                new_paths = self.find_all_paths(neighbor, end_vertex, path)
-                for new_path in new_paths:
-                    paths.append(new_path)
+        self._find_paths_helper(start_vertex, end_vertex, [], paths)
         return paths
 
-    # Step 5: Implement a Method to Check if the Graph is Connected
+    def _find_paths_helper(self, current, end, path, paths):
+        path.append(current)
+        
+        if current == end:
+            paths.append(list(path))
+        else:
+            for neighbor in self.adjacency_list.get(current, []):
+                if neighbor not in path:
+                    self._find_paths_helper(neighbor, end, path, paths)
+        
+        path.pop()
+
     def is_connected(self):
-        if not self.graph:
+        """Check if the graph is connected."""
+        if not self.adjacency_list:
             return True
-        start_vertex = next(iter(self.graph))
+        start_vertex = next(iter(self.adjacency_list))
         visited = set()
-        self._dfs_recursive(start_vertex, visited)
-        return len(visited) == len(self.graph)
+        self._dfs_helper(start_vertex, visited)
+        return len(visited) == len(self.adjacency_list)
 
-
-    # Step 6: Implement a Method to Find the Shortest Path
     def find_shortest_path(self, start_vertex, end_vertex):
-        if start_vertex not in self.graph or end_vertex not in self.graph:
+        """Find the shortest path using BFS."""
+        if start_vertex not in self.adjacency_list or end_vertex not in self.adjacency_list:
             return None
         
+        queue = deque([(start_vertex, [start_vertex])])
         visited = set()
-        queue = deque([(start_vertex, [start_vertex])])  # Store tuples of (vertex, path)
 
         while queue:
             vertex, path = queue.popleft()
+            if vertex == end_vertex:
+                return path
 
-            for neighbor in self.graph[vertex]:
+            for neighbor in self.adjacency_list[vertex]:
                 if neighbor not in visited:
-                    if neighbor == end_vertex:
-                        return path + [neighbor]  # Return the path to the end vertex
                     visited.add(neighbor)
                     queue.append((neighbor, path + [neighbor]))
 
-        return None  # No path found
-    
+        return None
 
-    # Step 7: Implement a Method to Detect Cycles
     def has_cycle(self):
+        """Detect cycles in the graph."""
         visited = set()
         
-        for vertex in self.graph:
+        for vertex in self.adjacency_list:
             if vertex not in visited:
-                if self._has_cycle_recursive(vertex, visited, -1):
+                if self._cycle_helper(vertex, visited, None):
                     return True
         return False
 
-    def _has_cycle_recursive(self, vertex, visited, parent):
+    def _cycle_helper(self, vertex, visited, parent):
         visited.add(vertex)
         
-        for neighbor in self.graph[vertex]:
+        for neighbor in self.adjacency_list[vertex]:
             if neighbor not in visited:
-                if self._has_cycle_recursive(neighbor, visited, vertex):
+                if self._cycle_helper(neighbor, visited, vertex):
                     return True
-            elif neighbor != parent:  # A cycle is detected
+            elif neighbor != parent:
                 return True
         return False
-    
 
-    # Step 8: Implement a Method to Check if the Graph is Bipartite
     def is_bipartite(self):
+        """Check if the graph is bipartite."""
         color = {}
         
-        for vertex in self.graph:
-            if vertex not in color:  # Not colored yet
+        for vertex in self.adjacency_list:
+            if vertex not in color:
                 queue = deque([vertex])
-                color[vertex] = 0  # Start coloring with color 0
+                color[vertex] = 0
                 
                 while queue:
                     current = queue.popleft()
-                    
-                    for neighbor in self.graph[current]:
+                    for neighbor in self.adjacency_list[current]:
                         if neighbor not in color:
-                            # Assign alternate color to the neighbor
                             color[neighbor] = 1 - color[current]
                             queue.append(neighbor)
                         elif color[neighbor] == color[current]:
-                            # If the neighbor has the same color, it's not bipartite
                             return False
         return True
-
-    
 
 # Test the Graph class
 g = Graph()
@@ -148,7 +145,7 @@ g.add_edge(2, 3)
 
 # Print the graph
 print("Graph representation:")
-g.print_graph()
+g.display()
 
 # Test DFS
 print("\nDFS starting from vertex 0:")
@@ -172,15 +169,12 @@ g.add_vertex(4)
 print("After adding a disconnected vertex:")
 print("Is the graph connected?", g.is_connected())
 
-
 # Find and print the shortest path
 shortest_path = g.find_shortest_path(0, 3)
 print("\nShortest path from vertex 0 to vertex 3:", shortest_path)
 
-
 # Check for cycles
 print("\nDoes the graph contain a cycle?", g.has_cycle())
-
 
 # Check if the graph is bipartite
 print("\nIs the graph bipartite?", g.is_bipartite())
